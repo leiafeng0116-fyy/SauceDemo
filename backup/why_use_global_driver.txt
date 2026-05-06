@@ -1,0 +1,58 @@
+如果 login_driver 不依赖 global_driver，自己独立创建 Safari 浏览器，而 logged_driver 仍然依赖 global_driver（session 级），那么一起运行登录测试和登录后的测试时，很可能会报错。
+
+为什么？
+
+Safari 的技术限制
+
+Safari 的 WebDriver 实现（ safaridriver ）同一时刻只允许一个 WebDriver 会话（session）存在。
+也就是说，你不能同时运行两个或以上的 webdriver.Safari() 实例。一旦第一个浏览器打开，第二个尝试创建时就会抛出类似 session not created 或 Unable to create new service 的异常。
+你的混合方案会导致什么？
+
+假设你的测试套件中有：
+
+一个使用 login_driver 的测试用例（独立创建 Safari）
+一个使用 logged_driver 的测试用例（依赖 global_driver，而 global_driver 是 session 级，会在所有测试之前启动一个 Safari 并一直存活）
+执行顺序（pytest 默认串行）：
+
+pytest 启动，发现 global_driver 需要被创建（因为 logged_driver 依赖它），于是创建第一个 Safari 浏览器（实例 A）。
+然后执行第一个测试用例（比如登录测试），它请求 login_driver。login_driver 尝试创建第二个 Safari 浏览器（实例 B）。
+SafariDriver 检测到已存在一个会话，拒绝创建第二个 → 报错。
+即使串行执行，因为 global_driver 一直存活（session 级），而 login_driver 又想创建新的，两者会同时存在（时间上有重叠），所以一定会冲突。
+
+怎么避免报错？
+
+方案一：让两个 fixture 共用同一个全局 driver（当前的设计）
+
+这就是你 conftest.py 原本的做法：login_driver 和 logged_driver 都依赖 global_driver，共用同一个浏览器。登录测试用例需要“干净状态”时，通过 delete_all_cookies() + refresh() 回到登录页即可。
+
+✅ 好处：不违反 Safari 限制，速度快。
+⚠️ 注意：需要确保每个测试用例结束后恢复干净状态，避免相互干扰。你的 login_driver 已经做了 delete_all_cookies() 和 refresh()，应该够用。
+
+方案二：两个 fixture 都独立创建，但确保串行执行且不同时存在
+
+如果你坚持 login_driver 不依赖 global_driver，那么 logged_driver 也必须改成独立创建（不再依赖 global_driver），并且不能有 session 级的常驻浏览器。
+
+python
+@pytest.fixture(scope="function")
+def logged_driver(request):   # 改为 function 作用域，独立创建
+    driver = webdriver.Safari(options=Options())
+    driver.maximize_window()
+    driver.implicitly_wait(10)
+    # 这里需要自己处理登录（要么每次真实登录，要么 cookie 注入但需要先有 cookie）
+    # ... 登录逻辑 ...
+    yield driver
+    driver.quit()
+这样每个用例都有自己的浏览器，用完即关。pytest 默认串行执行，不会同时存在两个浏览器，所以不会报错。
+
+❌ 缺点：每个测试用例都要重新启动浏览器和登录，速度很慢；如果将来开启并行（pytest -n），仍会因同时启动多个 Safari 而失败。
+
+方案三：改用 Chrome 或 Firefox
+
+如果你不想受 Safari 单实例限制，最简单的办法是换成 Chrome 或 Firefox 的 WebDriver。它们都支持在同一台机器上并行运行多个实例（只要资源够）。这样你就可以让 login_driver 和 logged_driver 各自独立创建，毫无冲突。
+
+总结建议
+
+你的目标	推荐做法
+继续用 Safari，要跑登录测试 + 登录后测试	保持原设计：两个 fixture 都依赖 global_driver，通过 cookie 清除实现状态重置。
+希望登录测试完全隔离，不怕慢	将 logged_driver 也改成独立创建（不依赖 global_driver），并确保串行执行。
+未来可能需要并行测试，或用更灵活的浏览器	切换到 Chrome/Edge/Firefox，它们没有 Safari 的单实例限制。

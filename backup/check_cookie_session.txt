@@ -1,0 +1,31 @@
+from selenium import webdriver
+from selenium.webdriver.safari.options import Options
+import time
+
+options = Options()
+options.page_load_strategy='eager'
+driver = webdriver.Safari(options=options)
+driver.maximize_window()
+driver.get('https://www.saucedemo.com')
+time.sleep(1)
+
+# 直接用 JS 登录，绕过 click 超时
+#driver.execute_script(\"document.getElementById('user-name').value='standard_user'\")
+driver.execute_script(\"document.getElementById('password').value='secret_sauce'\")
+driver.execute_script(\"document.getElementById('login-button').click()\")
+time.sleep(2)
+
+# 检查 cookies
+cookies = driver.get_cookies()
+print(f'Cookies数量: {len(cookies)}')
+
+# 检查 sessionStorage
+session = driver.execute_script('return JSON.stringify(window.sessionStorage);')
+print(f'sessionStorage: {session}')
+
+# 检查 localStorage
+local = driver.execute_script('return JSON.stringify(window.localStorage);')
+print(f'localStorage: {local}')
+
+print(f'当前URL: {driver.current_url}')
+driver.quit()

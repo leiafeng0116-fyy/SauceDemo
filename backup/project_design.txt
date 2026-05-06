@@ -1,0 +1,319 @@
+## 一、测试分层设计思路
+
+基于你的已有框架（`pages/`、`base_page.py`、`conftest.py`、`pytest.ini`），登录后的测试用例设计核心思路是：
+
+> **横向拆分功能模块，纵向遵循依赖链（登录 → 商品 → 购物车 → 结算）**
+
+SauceDemo 登录后的核心业务流程可以概括为以下几个测试模块：
+
+| 模块 | 测试页面 | 依赖关系 |
+|------|---------|---------|
+| **Products** | `/inventory.html` | 登录后默认到达 |
+| **Product Detail** | `/inventory-item.html?id=n` | 从商品列表点击进入 |
+| **Cart** | `/cart.html` | 需要先有商品添加操作 |
+| **Checkout**（含 Info + Overview + Complete） | `/checkout-step-one.html` → `/checkout-step-two.html` → `/checkout-complete.html` | 需要先有购物车数据 |
+
+---
+
+## 二、目录结构规划
+
+基于你的现有框架，扩展后的完整目录结构建议如下：
+￼
+
+```
+ui_test_project/
+├── base/                         # 基类层
+│   └── base_page.py              # 已有：封装driver、等待、元素基础方法
+├── common/                       # 公共工具层
+│   ├── conftest.py               # 已有：pytest配置、fixtures
+│   └── test_data.py              # 建议新增：测试数据管理（常量、凭证等）
+├── pages/                        # 页面对象层（PO层）
+│   ├── home_page.py              # 已有
+│   ├── login_page.py             # 已有
+│   ├── inventory_page.py         # 新增：商品列表页
+│   ├── product_detail_page.py    # 新增：商品详情页
+│   ├── cart_page.py              # 新增：购物车页
+│   ├── checkout_info_page.py     # 新增：填写信息页
+│   ├── checkout_overview_page.py # 新增：订单概览页
+│   └── checkout_complete_page.py # 新增：订单完成页
+├── testcases/                    # 测试用例层
+│   ├── test_login.py             # 已有
+│   ├── test_products.py          # 新增：商品相关测试
+│   ├── test_cart.py              # 新增：购物车相关测试
+│   └── test_checkout.py          # 新增：结算流程测试
+├── reports/                      # 测试报告目录
+│   ├── assets/                   # 报告资源文件
+│   └── report.html
+├── screenshots/                  # 失败截图目录
+├── pytest.ini                    # pytest配置文件
+└── requirements.txt
+```
+
+### 目录职责说明
+
+- **`base/base_page.py`**：封装 `find_element`、`wait_for_element`、`click`、`input_text`、`get_text` 等通用方法，所有页面类继承它。
+- **`common/test_data.py`**：存放测试使用的常量数据，如登录凭证、商品名称、用户信息等。
+- **`pages/`**：每个页面独立的类，封装该页面特有的元素定位和业务操作方法，禁止在测试用例中直接写元素定位表达式。
+- **`testcases/`**：按功能模块拆分测试文件，测试用例中只调用页面对象的方法，不写具体定位逻辑，不包含硬编码数据。
+
+---
+
+## 三、各页面对象（Page Object）核心方法设计
+
+### 1. InventoryPage（商品列表页）
+
+```python
+# pages/inventory_page.py
+from base.base_page import BasePage
+from selenium.webdriver.common.by import By
+from pages.product_detail_page import ProductDetailPage
+from pages.cart_page import CartPage
+
+class InventoryPage(BasePage):
+    # 元素定位器
+    PAGE_TITLE = (By.CSS_SELECTOR, ".title")
+    PRODUCT_ITEMS = (By.CSS_SELECTOR, ".inventory_item")
+    PRODUCT_NAMES = (By.CSS_SELECTOR, ".inventory_item_name")
+    PRODUCT_PRICES = (By.CSS_SELECTOR, ".inventory_item_price")
+    CART_ICON = (By.CSS_SELECTOR, ".shopping_cart_link")
+    CART_BADGE = (By.CSS_SELECTOR, ".shopping_cart_badge")
+    
+    def get_product_name_by_index(self, index):
+        """获取指定索引的商品名称"""
+        pass
+    
+    def get_product_price_by_name(self, product_name):
+        """根据商品名称获取价格"""
+        pass
+    
+    def click_add_to_cart_by_name(self, product_name):
+        """根据商品名称点击Add to Cart"""
+        pass
+    
+    def click_remove_by_name(self, product_name):
+        """根据商品名称点击Remove（添加后出现）"""
+        pass
+    
+    def get_cart_count(self):
+        """获取购物车角标数量"""
+        pass
+    
+    def click_product_title(self, product_name):
+        """点击商品标题进入详情页，返回ProductDetailPage对象"""
+        pass
+    
+    def go_to_cart(self):
+        """点击购物车图标，返回CartPage对象"""
+        self.click(self.CART_ICON)
+        return CartPage(self.driver)
+```
+
+### 2. CartPage（购物车页）
+
+```python
+# pages/cart_page.py
+class CartPage(BasePage):
+    CART_ITEMS = (By.CSS_SELECTOR, ".cart_item")
+    ITEM_NAMES = (By.CSS_SELECTOR, ".inventory_item_name")
+    ITEM_PRICES = (By.CSS_SELECTOR, ".inventory_item_price")
+    ITEM_QUANTITIES = (By.CSS_SELECTOR, ".cart_quantity")
+    REMOVE_BUTTONS = (By.CSS_SELECTOR, ".cart_button")
+    CONTINUE_SHOPPING_BTN = (By.ID, "continue-shopping")
+    CHECKOUT_BTN = (By.ID, "checkout")
+    
+    def get_cart_item_count(self):
+        """获取购物车中的商品数量"""
+        pass
+    
+    def get_cart_item_names(self):
+        """获取购物车中所有商品名称列表"""
+        pass
+    
+    def remove_item_from_cart(self, product_name):
+        """从购物车移除指定商品"""
+        pass
+    
+    def click_checkout(self):
+        """点击Checkout按钮，返回CheckoutInfoPage对象"""
+        pass
+```
+
+### 3. CheckoutInfoPage（结算信息页）
+
+```python
+# pages/checkout_info_page.py
+class CheckoutInfoPage(BasePage):
+    FIRST_NAME_INPUT = (By.ID, "first-name")
+    LAST_NAME_INPUT = (By.ID, "last-name")
+    POSTAL_CODE_INPUT = (By.ID, "postal-code")
+    CONTINUE_BTN = (By.ID, "continue")
+    CANCEL_BTN = (By.ID, "cancel")
+    ERROR_MSG = (By.CSS_SELECTOR, "h3[data-test='error']")
+    
+    def enter_checkout_info(self, first_name, last_name, postal_code):
+        """填写结算信息"""
+        pass
+    
+    def click_continue(self):
+        """点击Continue，返回CheckoutOverviewPage对象"""
+        pass
+```
+
+### 4. CheckoutOverviewPage（订单概览页）
+
+```python
+# pages/checkout_overview_page.py
+class CheckoutOverviewPage(BasePage):
+    SUMMARY_TOTAL = (By.CSS_SELECTOR, ".summary_total_label")
+    ITEM_TOTALS = (By.CSS_SELECTOR, ".summary_subtotal_label")
+    TAX_LABEL = (By.CSS_SELECTOR, ".summary_tax_label")
+    FINISH_BTN = (By.ID, "finish")
+    CANCEL_BTN = (By.ID, "cancel")
+    CART_ITEMS = (By.CSS_SELECTOR, ".cart_item")
+    
+    def get_item_names_in_overview(self):
+        """获取概览页中的商品名称列表"""
+        pass
+    
+    def get_subtotal_price(self):
+        """获取商品小计金额"""
+        pass
+    
+    def click_finish(self):
+        """点击Finish，返回CheckoutCompletePage对象"""
+        pass
+```
+
+---
+
+## 四、测试用例设计（按模块详述）
+
+### 1. `test_products.py` — 商品模块测试（约 8~10 条用例）
+
+#### 1.1 页面加载与商品展示
+
+- `test_products_page_title_displayed`：登录后商品页标题是否为"Products"
+- `test_product_list_visible`：验证商品列表可见，至少有 6 个商品
+- `test_each_product_displays_required_fields`：验证每个商品展示了图片、标题、价格和 Add to Cart 按钮
+
+#### 1.2 商品排序功能（SauceDemo 右上角下拉菜单支持排序）
+
+- `test_sort_by_name_az`：按名称 A → Z 排序验证
+- `test_sort_by_name_za`：按名称 Z → A 排序验证
+- `test_sort_by_price_low_to_high`：按价格低→高排序验证
+- `test_sort_by_price_high_to_low`：按价格高→低排序验证
+
+#### 1.3 添加/移除商品
+
+- `test_add_one_product_to_cart`：添加一个商品后，购物车角标数量变为 1，按钮文字变为 Remove
+- `test_add_multiple_products_to_cart`：添加多个商品，购物车角标计数正确累加
+- `test_add_and_remove_product_updates_cart_badge`：添加后再移除，购物车角标应消失或归零
+- `test_add_same_product_twice`：同一商品是否可重复添加并计数正确（验证界面逻辑）
+
+#### 1.4 商品详情页跳转
+
+- `test_click_product_title_opens_detail_page`：点击商品标题跳转到正确的商品详情页（URL 包含 `id` 参数，页面展示该商品信息）
+
+---
+
+### 2. `test_cart.py` — 购物车模块测试（约 6~8 条用例）
+
+> ⚠️ 此模块依赖 `test_products.py` 中的添加商品操作，建议使用 `conftest.py` 中的 fixture 复用登录态。
+
+#### 2.1 购物车内容展示
+
+- `test_cart_displays_all_added_items`：添加两件商品后进入购物车，验证购物车内商品名称与实际添加一致
+- `test_cart_item_prices_match_inventory`：验证购物车中价格与商品页价格一致
+- `test_cart_item_quantity_display`：SauceDemo 购物车中每个商品显示数量为 1（数量固定，可验证）
+
+#### 2.2 购物车操作
+
+- `test_remove_item_from_cart_on_cart_page`：在购物车页面移除商品，验证该商品从购物车消失
+- `test_continue_shopping_returns_to_inventory`：点击 Continue Shopping 返回商品页，验证 URL 或页面标题
+- `test_empty_cart_shows_empty_state`：清空购物车后验证空状态信息或角标消失
+
+#### 2.3 跨页面同步验证
+
+- `test_cart_badge_count_syncs_with_cart_items`：添加/移除商品时，商品页角标与购物车内商品数量同步更新
+- `test_cart_persistence_after_logout`：添加商品后登出再登入，验证购物车为空（可选，验证 Session 行为）
+
+---
+
+### 3. `test_checkout.py` — 结算流程测试（约 8~10 条用例）
+
+> 建议使用 fixture 预先添加 1~2 件商品到购物车，以复用登录和添加商品的准备步骤。
+
+#### 3.1 结算信息验证
+
+- `test_checkout_form_validation_all_fields_required`：全为空，点击 Continue 应提示错误信息
+- `test_checkout_form_validation_missing_first_name`：仅缺少 First Name 时触发错误
+- `test_checkout_form_validation_missing_last_name`：仅缺少 Last Name 时触发错误
+- `test_checkout_form_validation_missing_postal_code`：仅缺少 Postal Code 时触发错误
+- `test_valid_form_proceeds_to_overview`：填写有效信息后点击 Continue 进入订单概览页
+
+#### 3.2 订单概览验证
+
+- `test_overview_displays_all_cart_items`：概览页展示的商品名称与购物车内容一致
+- `test_overview_item_total_calculation`：验证商品小计价格与购物车内价格总和一致
+- `test_overview_total_price_with_tax`：验证最终总价 = 商品小计 + 税费
+- `test_cancel_button_overview_returns_to_inventory`：概览页点 Cancel 返回商品页
+
+#### 3.3 订单完成验证
+
+- `test_checkout_completion_flow`：完整结算流程验证，完成后显示成功信息"Thank you for your order！"或类似措辞
+- `test_checkout_completion_redirects_to_inventory_after_complete`：Finish 后回到商品页，购物车清空
+
+---
+
+## 五、各模块测试数量汇总
+
+| 测试文件 | 用例数量 | 执行优先级 | 备注 |
+|---------|---------|-----------|------|
+| `test_products.py` | 8~10 条 | 高 | 页面基础和排序功能覆盖 |
+| `test_cart.py` | 6~8 条 | 中 | 可与 products 复用 fixture |
+| `test_checkout.py` | 8~10 条 | 中 | 依赖 cart fixture |
+| **合计** | **22~28 条** | — | 按阶段分批增量开发 |
+
+> 建议按 **Products → Cart → Checkout** 的先后顺序开发，避免依赖断裂导致用例大面积失败。
+
+---
+
+## 六、关键技术建议
+
+✅ **推荐在 `conftest.py` 中创建 fixture 优化登录**
+
+```python
+import pytest
+from pages.login_page import LoginPage
+
+@pytest.fixture
+def logged_in_driver(driver):
+    """登录后的driver fixture，供购物车和结算测试复用"""
+    login_page = LoginPage(driver)
+    login_page.navigate_to()  # 打开登录页
+    inventory_page = login_page.login("standard_user", "secret_sauce")
+    yield driver
+    # 可选 teardown
+```
+
+✅ **推荐在 `common/test_data.py` 统一管理测试数据**
+
+```python
+# common/test_data.py
+VALID_USER = {"username": "standard_user", "password": "secret_sauce"}
+PRODUCTS = ["Sauce Labs Backpack", "Sauce Labs Bike Light"]
+CHECKOUT_INFO = {"first_name": "Test", "last_name": "User", "postal_code": "12345"}
+```
+
+---
+
+## 七、后续扩展建议
+
+以上设计已覆盖 SauceDemo 的核心业务链路。待这些用例稳定运行后，建议进一步覆盖以下场景：
+
+| 扩展方向 | 说明 |
+|---------|------|
+| **异常用户测试** | 分别使用 `locked_out_user`、`problem_user`、`performance_glitch_user` 验证不同用户的页面行为差异 |
+| **UI样式/视觉回归** | 添加 snapshots 比对，确保前端改动不影响页面关键元素的展示 |
+| **并发与稳定性** | 在 CI 中配置定时执行，监控每个用例的稳定性和执行耗时 |
+| **数据驱动测试** | 使用 pytest 的 `@pytest.mark.parametrize` 对多个商品进行遍历测试，避免硬编码重复 |
