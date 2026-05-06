@@ -1,7 +1,7 @@
 from selenium.webdriver.common.by import By
 from base.base_page import BasePage
 from pages.inventory_page import InventoryPage
-from common.test_data import ITEMS_DETAILS 
+from common.test_data import ITEMS_DETAILS
 
 
 class ProductDetailPage(BasePage):
@@ -32,15 +32,19 @@ class ProductDetailPage(BasePage):
         return self.driver.find_element(*self.product_price).text
     
     def click_add_btn(self):
-        add_btn = self.wait_for_element_visible(*self.add_to_cart_btn)
+        add_btn = self.wait_for_element_visible(self.add_to_cart_btn)
         self.driver.execute_script("arguments[0].click();", add_btn)
     
     def click_remove_btn(self):
-        remove_btn = self.wait_for_element_visible(*self.remove_btn) 
+        remove_btn = self.wait_for_element_visible(self.remove_btn) 
         self.driver.execute_script("arguments[0].click();", remove_btn)
 
     def click_back_btn(self):
-        back_btn = self.wait_for_element_clickable(*self.back_to_products_btn)
+        back_btn = self.wait_for_element_clickable(self.back_to_products_btn)
         self.driver.execute_script("arguments[0].click();", back_btn)
+
+    def click_cart_icon(self):
+        cart_icon = self.wait_for_element_clickable(InventoryPage.cart_badge)
+        self.driver.execute_script("arguments[0].click();", cart_icon)
 
 

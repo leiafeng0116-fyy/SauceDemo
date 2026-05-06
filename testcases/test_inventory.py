@@ -8,7 +8,6 @@ class TestInventory:
         product_title = inventory_page.wait_for_element_visible(inventory_page.Products_title)
         
         assert "inventory" in inventory_page.driver.current_url, f"断言失败，当前 URL 不包含 'inventory'，实际：{inventory_page.driver.current_url}"
-        assert product_title.is_displayed(), f"断言失败，Products 标题未显示"
         assert product_title.text == "Products", f"断言失败，标题文字不是 Products，实际：{product_title.text}"
 
 
@@ -65,6 +64,7 @@ class TestInventory:
         assert first_item_price == "$7.99", f"断言失败，排序后第一个商品价格不正确，预期：$7.99，实际：{first_item_price}"
         print(f"✅ 成功按价格从低到高排序，第一件商品价格正确显示为 {first_item_price}")
 
+    """CASE6: 点击商品链接进入详情页"""
     def test_click_item_link(self,logged_driver):
         inventory_page = InventoryPage(logged_driver)
         item = ITEMS_DETAILS["Onesie"]
