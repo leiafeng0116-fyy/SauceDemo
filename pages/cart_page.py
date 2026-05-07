@@ -16,7 +16,30 @@ class CartPage(BasePage):
     
     your_cart_text = (By.CSS_SELECTOR, "span.title")
     continue_shopping_btn = (By.ID, "continue-shopping")
+
+
     checkout_btn = (By.ID, "checkout")
+    # checkout-step1 page
+    checkout_information = (By.CSS_SELECTOR, ".checkout_info")
+    first_name = (By.ID, "first-name")
+    last_name = (By.ID, "last-name")
+    zip_code = (By.ID, "postal-code")
+    continue_btn= (By.ID, "continue")
+    cancel_btn = (By.ID, "cancel")
+
+    # checkout-step2 page
+    checkout_overview = (By.CSS_SELECTOR, ".checkout_summary_container")
+    item_price_total = (By.CSS_SELECTOR, ".summary_subtotal_label")
+    item_tax_total = (By.CSS_SELECTOR, ".summary_tax_label")
+    item_total = (By.CSS_SELECTOR, ".summary_total_label")
+    finish_btn = (By.ID, "finish")
+
+    # complete page
+    complete_header = (By.CSS_SELECTOR, ".complete-header")
+    complete_text = (By.CSS_SELECTOR, ".complete-text")
+    back_btn = (By.ID, "back-to-products")
+
+    
 
     @classmethod
     def open_cart_page(cls, driver):
@@ -51,8 +74,6 @@ class CartPage(BasePage):
         # 等待移除操作完成，确保购物车已清空。等价于断言
         self.wait_for_element_invisible(self.remove_btn_selector)
     
-
-
     def get_your_cart_text(self):
         """获取购物车页面标题文本"""
         return self.get_text(self.your_cart_text)
@@ -61,3 +82,31 @@ class CartPage(BasePage):
         """点击 Continue Shopping 按钮返回商品列表页"""
         continue_btn = self.wait_for_element_clickable(self.continue_shopping_btn)
         self.driver.execute_script("arguments[0].click();", continue_btn)
+
+    def click_checkout(self):
+        """点击 Checkout 按钮进入结算页面"""
+        checkout_btn = self.wait_for_element_clickable(self.checkout_btn)
+        self.driver.execute_script("arguments[0].click();", checkout_btn)
+    
+    def input_checkout_info(self,firstname,lastname,zipcode):
+        """输入结算信息表单"""
+        self.input_text(self.first_name, firstname)
+        self.input_text(self.last_name, lastname)
+        self.input_text(self.zip_code, zipcode)
+        continue_btn = self.wait_for_element_clickable(self.continue_btn) 
+        self.driver.execute_script("arguments[0].click();", continue_btn)
+
+    def get_checkout_price(self):
+        self.item_price_total = self.get_text(self.item_price_total)
+        self.item_tax_total = self.get_text(self.item_tax_total)
+        self.item_total = self.get_text(self.item_total)
+        return [self.item_price_total, self.item_tax_total, self.item_total]
+    
+    def click_finish_btn(self):
+        finish_btn = self.wait_for_element_clickable(self.finish_btn)
+        self.driver.execute_script("arguments[0].click();", finish_btn)
+    
+    def get_all_complete_text(self):
+        self.complete_header = self.get_text(self.complete_header)
+        self.complete_text = self.get_text(self.complete_text)
+        return [self.complete_header,  self.complete_text]

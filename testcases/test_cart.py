@@ -28,3 +28,24 @@ class TestCartPage:
         cart_page.reset_cart()
         cart_items = cart_page.get_all_cart_items()
         assert len(cart_items) == 0, f"断言失败，购物车中商品数量不为0"
+
+    """CASE4: 进入结算页面结算"""
+    def test_checkout(self, logged_driver):
+        add_items_to_cart(logged_driver, "Backpack","Onesie")
+        cart_page = CartPage.open_cart_page(logged_driver)
+        cart_page.click_checkout()
+        cart_page.wait_for_element_visible(cart_page.checkout_information)  # 等待结算信息表单可见，说明已进入结算页面
+        cart_page.input_checkout_info("John", "Doe", "12345")  # 输入结算信息并继续
+        cart_page.wait_for_element_visible(cart_page.checkout_overview)  # 等待结算概览可见，说明已进入结算概览页面
+        # 断言结算概览页面显示正确的商品总价、税费
+        checkout_price = cart_page.get_checkout_price()
+        assert checkout_price[0] == "Item total: $37.98", f"断言失败，结算概览页面商品总价不正确，预期：'Item total: $37.98'，实际：{cart_page.item_price_total}" 
+        assert checkout_price[1]  == "Tax: $3.04", f"断言失败，结算概览页面税费不正确，预期：'Tax: $3.04'，实际：{cart_page.item_tax_total}"
+        assert checkout_price[2]  == "Total: $41.02", f"断言失败，结算概览页面总价不正确，预期：'Total: $41.02'，实际：{cart_page.item_total}"
+        # 点击finish
+        cart_page.click_finish_btn()
+        cart_page.wait_for_element_visible(cart_page.back_btn)
+        cpmplete_text = cart_page.get_all_complete_text()
+        assert cpmplete_text[0] == "Thank you for your order!", f"断言失败"
+        assert cpmplete_text[1] == "Your order has been dispatched, and will arrive just as fast as the pony can get there!", f"断言失败"
+        
