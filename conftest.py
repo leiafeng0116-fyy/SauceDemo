@@ -4,8 +4,11 @@ import pytest
 from selenium import webdriver
 import os
 from selenium.webdriver.safari.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from common.test_data import URLS, VALID_USER  
-from common.keywords import CommonKeywords
+from common.keywords import login
 
 
 # ===================== 截图工具函数 =====================
@@ -41,8 +44,7 @@ def global_driver():
 
     # 先打开登录页，再登录一次，所有测试共享此 session
     driver.get(URLS["login_url"])
-    kw = CommonKeywords(driver)
-    kw.login(VALID_USER["username"], VALID_USER["password"])
+    login(driver, VALID_USER["username"], VALID_USER["password"])
 
     yield driver
     driver.quit()
@@ -55,11 +57,19 @@ def logged_driver(request, global_driver):
     # 直接导航到 inventory 页面（Safari 的 session 共享，只要浏览器没关，登录态就在）
     global_driver.get(URLS["inventory_url"])
 
-    # 兜底：如果因为某些原因 session 丢失，重新登录
-    if "inventory.html" not in global_driver.current_url:
-        kw = CommonKeywords(global_driver)
-        kw.login(VALID_USER["username"], VALID_USER["password"])
+    # 检测 session 是否过期：导航到 inventory 后判断是否被重定向回登录页
+    # 检测方法：短等 3 秒看是否存在登录按钮（存在 = 被重定向 = session 失效）
+    # 不能用等待 inventory 元素的方式——页面加载慢时会误判为 session 过期
+    try:
+        WebDriverWait(global_driver, 3).until(
+            EC.presence_of_element_located((By.ID, "login-button"))
+        )
+        # 找到登录按钮说明被重定向到了登录页 → session 过期，重新登录
+        login(global_driver, VALID_USER["username"], VALID_USER["password"])
         global_driver.get(URLS["inventory_url"])
+    except Exception:
+        # 没找到登录按钮，说明仍在 inventory 页面，session 有效
+        pass
 
     # Safari WebDriver 在页面跳转后需要 stabilization，否则会抛出 NoSuchFrameException
     __import__("time").sleep(1)

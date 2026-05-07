@@ -16,7 +16,9 @@ class TestLogin:
         ids=Login_test_data.keys()
     )
     
-    def de_test_login_scenarios(self, login_driver, username, password, expect):
+    @pytest.mark.regression
+    @pytest.mark.smoke
+    def test_login_scenarios(self, login_driver, username, password, expect):
         login_driver = LoginPage(login_driver)
         login_driver.login(username, password)
         expected_ele = login_driver.wait_for_element_visible(expect)

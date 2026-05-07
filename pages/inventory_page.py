@@ -21,6 +21,7 @@ class InventoryPage(BasePage):
     remove_btn_selector = (By.XPATH, "//button[contains(@class,'btn_inventory') and text()='Remove']")
     
     cart_badge = (By.CSS_SELECTOR, ".shopping_cart_badge")
+    cart_link = (By.CSS_SELECTOR, ".shopping_cart_link")
     
     sort_dropdown = (By.CSS_SELECTOR, ".product_sort_container")
     sort_options = (By.XPATH, "//option[text()='{}']")
@@ -142,3 +143,8 @@ class InventoryPage(BasePage):
         locator = (self.item_link_by_name[0], self.item_link_by_name[1].format(name))
         item_link = self.wait_for_element_visible(locator)
         self.driver.execute_script("arguments[0].click();", item_link)
+
+    def click_cart_icon(self):
+        """点击页面上的购物车图标进入购物车页"""
+        cart_icon = self.wait_for_element_clickable(self.cart_link)
+        self.driver.execute_script("arguments[0].click();", cart_icon)

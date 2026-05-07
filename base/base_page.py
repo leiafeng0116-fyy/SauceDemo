@@ -58,6 +58,18 @@ class BasePage:
             return WebDriverWait(self.driver, timeout).until(
                 EC.visibility_of_element_located(locator)
             )
+        
+        # 等待元素不可见
+    def wait_for_element_invisible(self, locator, timeout=10):
+        try:
+            return WebDriverWait(self.driver, timeout).until(
+                EC.invisibility_of_element_located(locator)
+            )
+        except Exception:
+            self.driver.switch_to.default_content()
+            return WebDriverWait(self.driver, timeout).until(
+                EC.invisibility_of_element_located(locator)
+            )
 
     # 等待元素可点击
     def wait_for_element_clickable(self, locator, timeout=10):

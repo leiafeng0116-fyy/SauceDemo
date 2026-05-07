@@ -4,8 +4,6 @@ from common.test_data import URLS
 
 class LoginPage(BasePage):  # 继承 -- 子类拥有父类的所有功能
 
-    login_url = URLS["login_url"]
-    
     # 定位
     username_input = (By.ID, "user-name")
     password_input = (By.ID, "password")
