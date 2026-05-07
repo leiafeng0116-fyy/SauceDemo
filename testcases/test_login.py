@@ -17,7 +17,6 @@ class TestLogin:
     )
     
     @pytest.mark.regression
-    @pytest.mark.smoke
     def test_login_scenarios(self, login_driver, username, password, expect):
         login_driver = LoginPage(login_driver)
         login_driver.login(username, password)

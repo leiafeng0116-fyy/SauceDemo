@@ -72,3 +72,13 @@ class TestInventory:
         inventory_page.click_cart_icon()
         # 断言跳转到购物车页（URL 包含 cart.html)
         assert "cart.html" in inventory_page.driver.current_url, f"断言失败，点击购物车图标后 URL 不正确，预期包含：'cart.html'，实际: {inventory_page.driver.current_url}"
+
+
+    def test_logout(self, logged_driver):
+        inventory_page = InventoryPage(logged_driver)
+        inventory_page.click_logout()
+        inventory_page.wait_for_element_invisible(inventory_page.logout_link)
+        from pages.login_page import LoginPage
+        login_page = LoginPage(logged_driver)
+        login_logo = login_page.wait_for_element_visible(LoginPage.login_logo)
+        assert login_logo.text == 'Swag Labs', f"断言失败"

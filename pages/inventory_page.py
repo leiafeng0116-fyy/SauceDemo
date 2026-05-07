@@ -25,6 +25,9 @@ class InventoryPage(BasePage):
     
     sort_dropdown = (By.CSS_SELECTOR, ".product_sort_container")
     sort_options = (By.XPATH, "//option[text()='{}']")
+
+    navigator_menu = (By.ID, "react-burger-menu-btn")
+    logout_link = (By.ID, "logout_sidebar_link")
     
     @staticmethod
     def _name_to_id(name):
@@ -148,3 +151,9 @@ class InventoryPage(BasePage):
         """点击页面上的购物车图标进入购物车页"""
         cart_icon = self.wait_for_element_clickable(self.cart_link)
         self.driver.execute_script("arguments[0].click();", cart_icon)
+
+    def click_logout(self):
+        navigator_menu = self.driver.find_element(*self.navigator_menu)
+        self.driver.execute_script("arguments[0].click();", navigator_menu)
+        logout = self.wait_for_element_visible(self.logout_link)
+        self.driver.execute_script("arguments[0].click();", logout)
